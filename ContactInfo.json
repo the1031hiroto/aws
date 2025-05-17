@@ -1,0 +1,13 @@
+{
+  "FirstName": "Hiroto",
+  "LastName": "Soda",
+  "ContactType": "PERSON",
+  "OrganizationName": "",
+  "AddressLine1": "1-2-3 Example St.",
+  "City": "Minato",
+  "State": "JP-13",
+  "CountryCode": "JP",
+  "ZipCode": "106-0032",
+  "PhoneNumber": "+81.9012345678",
+  "Email": "hiroto.soda@hiroto-soda.com"
+}

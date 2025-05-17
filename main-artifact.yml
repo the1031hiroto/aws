@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infrastructure for WordPress application with AWS
+Parameters:
+  WebACLArn:
+    Type: String
+    Description: WAF WebACL for CloudFront
+  ACMArn:
+    Type: String
+  KeyName:
+    Type: String
+    Description: The name of an existing EC2 KeyPair for SSH access
+    Default: NewKey
+Resources:
+  IAMStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/wordpress-stack-artifact2/187b059e21b3090e131419a1562431bf.template
+  EC2Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/wordpress-stack-artifact2/5a55799b33b9b35519b6beb40a69ba96.template
+  ALBStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/wordpress-stack-artifact2/5ee48a6155b2bceb1b66ac67fa383ab0.template
+      Parameters:
+        PublicSubnet1:
+          Fn::GetAtt:
+          - EC2Stack
+          - Outputs.PublicSubnet1
+        PublicSubnet2:
+          Fn::GetAtt:
+          - EC2Stack
+          - Outputs.PublicSubnet2
+        EC2SecurityGroup:
+          Fn::GetAtt:
+          - EC2Stack
+          - Outputs.EC2SecurityGroup
+        VPC:
+          Fn::GetAtt:
+          - EC2Stack
+          - Outputs.VpcId
+        EC2InstanceProfile:
+          Fn::GetAtt:
+          - IAMStack
+          - Outputs.EC2InstanceProfile
+        KeyName:
+          Ref: KeyName
+        WebACLArn:
+          Ref: WebACLArn
+        ACMArn:
+          Ref: ACMArn
+  RDSStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/wordpress-stack-artifact2/10420ef4784b1260b6a06c5f442b42d2.template
+      Parameters:
+        RDSIAMRoleArn:
+          Fn::GetAtt:
+          - IAMStack
+          - Outputs.RDSIAMRoleArn
+        EC2SecurityGroup:
+          Fn::GetAtt:
+          - EC2Stack
+          - Outputs.EC2SecurityGroup
+        PrivateSubnet1:
+          Fn::GetAtt:
+          - EC2Stack
+          - Outputs.PrivateSubnet1
+        PrivateSubnet2:
+          Fn::GetAtt:
+          - EC2Stack
+          - Outputs.PrivateSubnet2
+Outputs:
+  VpcId:
+    Value:
+      Fn::GetAtt:
+      - EC2Stack
+      - Outputs.VpcId

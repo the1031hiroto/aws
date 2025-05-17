@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "RDS Stack for WordPress Database"
+
+Parameters:
+  RDSIAMRoleArn:
+    Type: String
+  EC2SecurityGroup:
+    Type: String
+  PrivateSubnet1:
+    Type: String
+  PrivateSubnet2:
+    Type: String
+
+Resources:
+  #####################################
+  # secret manager
+  #####################################
+  RDSSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${AWS::StackName}"
+      Description: "Master password for RDS MariaDB"
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: "password"
+        ExcludePunctuation: true
+
+  #####################################
+  # RDS for MariaDB
+  #####################################
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DependsOn:
+      - RDSSubnetGroup
+      - RDSSecret
+    Properties:
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20
+      Engine: mariadb
+      MasterUsername: !Sub "{{resolve:secretsmanager:${AWS::StackName}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${AWS::StackName}:SecretString:password}}"
+      VPCSecurityGroups:
+        - !Ref EC2SecurityGroup
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      MonitoringRoleArn: !Ref RDSIAMRoleArn
+      MonitoringInterval: 60
+      PubliclyAccessible: false
+      DeletionProtection: true
+      MultiAZ: true
+
+  RDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnet group for RDS"
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+Outputs:
+  RDSInstanceEndpoint:
+    Value: !GetAtt RDSInstance.Endpoint.Address

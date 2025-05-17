@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Infrastructure for WordPress application with AWS"
+
+Parameters:
+  WebACLArn:
+    Type: String
+    Description: "WAF WebACL for CloudFront"
+  ACMArn:
+    Type: String
+  KeyName:
+    Type: String
+    Description: "The name of an existing EC2 KeyPair for SSH access"
+    Default: "NewKey"
+
+Resources:
+  IAMStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: cloudformation/iam.yaml
+
+  EC2Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: cloudformation/ec2.yaml
+
+  ALBStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: cloudformation/alb.yaml
+      Parameters:
+        PublicSubnet1: !GetAtt EC2Stack.Outputs.PublicSubnet1
+        PublicSubnet2: !GetAtt EC2Stack.Outputs.PublicSubnet2
+        EC2SecurityGroup: !GetAtt EC2Stack.Outputs.EC2SecurityGroup
+        VPC: !GetAtt EC2Stack.Outputs.VpcId
+        EC2InstanceProfile: !GetAtt IAMStack.Outputs.EC2InstanceProfile
+        KeyName: !Ref KeyName
+        WebACLArn: !Ref WebACLArn
+        ACMArn: !Ref ACMArn
+
+  RDSStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: cloudformation/rds.yaml
+      Parameters:
+        RDSIAMRoleArn: !GetAtt IAMStack.Outputs.RDSIAMRoleArn
+        EC2SecurityGroup: !GetAtt EC2Stack.Outputs.EC2SecurityGroup
+        PrivateSubnet1: !GetAtt EC2Stack.Outputs.PrivateSubnet1
+        PrivateSubnet2: !GetAtt EC2Stack.Outputs.PrivateSubnet2
+
+Outputs:
+  VpcId:
+    Value: !GetAtt EC2Stack.Outputs.VpcId

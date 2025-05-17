@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "ACM 証明書 (CloudFront 用)"
+
+Parameters:
+  DomainName:
+    Type: String
+    Description: "CloudFront 用の FQDN (例: example.com)"
+
+  HostedZoneId:
+    Type: String
+    Description: "Route 53 の Hosted Zone ID"
+
+Resources:
+  #############################################
+  # ACM for CloudFront
+  #############################################
+  ACMCertificateCloudFront:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          HostedZoneId: !Ref HostedZoneId
+
+  #####################################
+  # WAF WebACL for CloudFront
+  #####################################
+  WebACL:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: "WordPressWebACL"
+      Scope: CLOUDFRONT
+      DefaultAction:
+        Allow: {}
+      Rules:
+        - Name: "AWSManagedRulesCommonRuleSet"
+          Priority: 1
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: "AWS"
+              Name: "AWSManagedRulesCommonRuleSet"
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: "AWSManagedRulesCommonRuleSet"
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: "WordPressWebACL"
+
+Outputs:
+  ACMCertificateCloudFront:
+    Description: "ACM for CloudFront"
+    Value: !Ref ACMCertificateCloudFront
+  WebACLArn:
+    Description: "WAF WebACL for CloudFront"
+    Value: !GetAtt WebACL.Arn
